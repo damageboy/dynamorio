@@ -101,7 +101,7 @@ static file_t funclist_file = INVALID_FILE;
  * to hold all entries between clean calls.
  */
 // XXX i#1703: use an option instead.
-#define MAX_NUM_ENTRIES 4096
+#define MAX_NUM_ENTRIES 1024
 /* The buffer size for holding trace entries. */
 static size_t trace_buf_size;
 /* The redzone is allocated right after the trace buffer.
@@ -718,6 +718,27 @@ insert_conditional_skip_target(void *drcontext, instrlist_t *ilist, instr_t *whe
 #endif
 }
 
+/* clean_call sends the memory reference info to the simulator */
+static void
+clean_sched_yield(void)
+{
+    sched_yield();
+}
+
+
+/* We insert code to read from trace buffer and check whether the redzone
+ * is reached. If redzone is reached, the clean call will be called.
+ */
+static void
+instrument_sched_yield(void *drcontext, instrlist_t *ilist, instr_t *where,
+                       reg_id_t reg_ptr)
+{
+    dr_insert_clean_call_ex(drcontext, ilist, where, (void *)clean_sched_yield,
+                            DR_CLEANCALL_ALWAYS_OUT_OF_LINE, 0);
+}
+
+
+
 /* We insert code to read from trace buffer and check whether the redzone
  * is reached. If redzone is reached, the clean call will be called.
  */
@@ -1140,6 +1161,8 @@ event_app_instruction(void *drcontext, void *tag, instrlist_t *bb, instr_t *inst
                 adjust =
                     instrument_memref(drcontext, ud, bb, instr, reg_ptr, adjust, instr,
                                       instr_get_src(instr, i), i, false, pred);
+
+
             }
         }
 
@@ -1149,8 +1172,11 @@ event_app_instruction(void *drcontext, void *tag, instrlist_t *bb, instr_t *inst
                                            instr, instr_get_dst(instr, i), i, true, pred);
             }
         }
-        if (adjust != 0)
+        if (adjust != 0) {
             insert_update_buf_ptr(drcontext, bb, instr, reg_ptr, pred, adjust);
+            instrument_sched_yield(drcontext, bb, instr, reg_ptr);
+        }
+
     } else if (adjust != 0)
         insert_update_buf_ptr(drcontext, bb, instr, reg_ptr, DR_PRED_NONE, adjust);
 
