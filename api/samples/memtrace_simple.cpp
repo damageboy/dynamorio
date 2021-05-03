@@ -119,7 +119,7 @@ memtrace(void *drcontext)
     per_thread_t *data;
     mem_ref_t *mem_ref, *buf_ptr;
 
-    data = drmgr_get_tls_field(drcontext, tls_idx);
+    data = (per_thread_t *) drmgr_get_tls_field(drcontext, tls_idx);
     buf_ptr = BUF_PTR(data->seg_base);
     /* Example of dumpped file content:
      *   0x00007f59c2d002d3:  5, call
@@ -339,15 +339,15 @@ event_bb_app2app(void *drcontext, void *tag, instrlist_t *bb, bool for_trace,
 static void
 event_thread_init(void *drcontext)
 {
-    per_thread_t *data = dr_thread_alloc(drcontext, sizeof(per_thread_t));
+    per_thread_t *data = (per_thread_t *) dr_thread_alloc(drcontext, sizeof(per_thread_t));
     DR_ASSERT(data != NULL);
     drmgr_set_tls_field(drcontext, tls_idx, data);
 
     /* Keep seg_base in a per-thread data structure so we can get the TLS
      * slot and find where the pointer points to in the buffer.
      */
-    data->seg_base = dr_get_dr_segment_base(tls_seg);
-    data->buf_base =
+    data->seg_base = (byte *) dr_get_dr_segment_base(tls_seg);
+    data->buf_base = (mem_ref_t *)
         dr_raw_mem_alloc(MEM_BUF_SIZE, DR_MEMPROT_READ | DR_MEMPROT_WRITE, NULL);
     DR_ASSERT(data->seg_base != NULL && data->buf_base != NULL);
     /* put buf_base to TLS as starting buf_ptr */
@@ -375,7 +375,7 @@ event_thread_exit(void *drcontext)
 {
     per_thread_t *data;
     memtrace(drcontext); /* dump any remaining buffer entries */
-    data = drmgr_get_tls_field(drcontext, tls_idx);
+    data = (per_thread_t *) drmgr_get_tls_field(drcontext, tls_idx);
     dr_mutex_lock(mutex);
     num_refs += data->num_refs;
     dr_mutex_unlock(mutex);

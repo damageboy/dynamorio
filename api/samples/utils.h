@@ -56,6 +56,10 @@
 #    define IF_WINDOWS(x) /* nothing */
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* open a log file
  * - id:        client id for getting the client library path
  * - drcontext: DR's context for per-thread logging, pass NULL if global logging
@@ -80,3 +84,7 @@ log_stream_from_file(file_t f);
  */
 void
 log_stream_close(FILE *f);
+
+#ifdef __cplusplus
+}
+#endif

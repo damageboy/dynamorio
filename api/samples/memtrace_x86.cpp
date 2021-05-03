@@ -213,9 +213,9 @@ event_thread_init(void *drcontext)
     per_thread_t *data;
 
     /* allocate thread private data */
-    data = dr_thread_alloc(drcontext, sizeof(per_thread_t));
+    data = (per_thread_t *) dr_thread_alloc(drcontext, sizeof(per_thread_t));
     drmgr_set_tls_field(drcontext, tls_index, data);
-    data->buf_base = dr_thread_alloc(drcontext, MEM_BUF_SIZE);
+    data->buf_base = (char *) dr_thread_alloc(drcontext, MEM_BUF_SIZE);
     data->buf_ptr = data->buf_base;
     /* set buf_end to be negative of address of buffer end for the lea later */
     data->buf_end = -(ptr_int_t)(data->buf_base + MEM_BUF_SIZE);
@@ -245,7 +245,7 @@ event_thread_exit(void *drcontext)
     per_thread_t *data;
 
     memtrace(drcontext);
-    data = drmgr_get_tls_field(drcontext, tls_index);
+    data = (per_thread_t *) drmgr_get_tls_field(drcontext, tls_index);
     dr_mutex_lock(mutex);
     global_num_refs += data->num_refs;
     dr_mutex_unlock(mutex);
@@ -309,7 +309,7 @@ memtrace(void *drcontext)
     int i;
 #endif
 
-    data = drmgr_get_tls_field(drcontext, tls_index);
+    data = (per_thread_t *) drmgr_get_tls_field(drcontext, tls_index);
     mem_ref = (mem_ref_t *)data->buf_base;
     num_refs = (int)((mem_ref_t *)data->buf_ptr - mem_ref);
 
@@ -350,7 +350,7 @@ code_cache_init(void)
     byte *end;
 
     drcontext = dr_get_current_drcontext();
-    code_cache =
+    code_cache = (app_pc)
         dr_nonheap_alloc(page_size, DR_MEMPROT_READ | DR_MEMPROT_WRITE | DR_MEMPROT_EXEC);
     ilist = instrlist_create(drcontext);
     /* The lean procedure simply performs a clean call, and then jumps back
@@ -389,7 +389,7 @@ instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where, int pos, boo
     per_thread_t *data;
     app_pc pc;
 
-    data = drmgr_get_tls_field(drcontext, tls_index);
+    data = (per_thread_t *) drmgr_get_tls_field(drcontext, tls_index);
 
     /* Steal two scratch registers.
      * reg2 must be ECX or RCX for jecxz.
